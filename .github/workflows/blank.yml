@@ -34,13 +34,26 @@ jobs:
 
     - name: Fetch ngrok public address
       run: |
-        try {
-          $ngrokStatus = Invoke-RestMethod -Uri http://localhost:4040/api/tunnels
-          $publicAddress = $ngrokStatus.tunnels[0].public_url
-          Write-Output "Ngrok Tunnel Public Address: $publicAddress"
-        } catch {
-          Write-Output "Failed to retrieve ngrok public address. Ensure ngrok is running correctly."
-          Write-Output "Error details: $_"
+        $attempts = 0
+        $maxAttempts = 5
+        $publicAddress = $null
+        while ($attempts -lt $maxAttempts) {
+          try {
+            $ngrokStatus = Invoke-RestMethod -Uri http://localhost:4040/api/tunnels
+            if ($ngrokStatus.tunnels.Count -gt 0) {
+              $publicAddress = $ngrokStatus.tunnels[0].public_url
+              Write-Output "Ngrok Tunnel Public Address: $publicAddress"
+              break
+            }
+          } catch {
+            Write-Output "Failed to retrieve ngrok public address. Attempt $($attempts + 1) of $maxAttempts."
+            Write-Output "Error details: $_"
+          }
+          $attempts++
+          Start-Sleep -Seconds 5
+        }
+        if (-not $publicAddress) {
+          Write-Error "Failed to retrieve ngrok public address after $maxAttempts attempts."
         }
       shell: pwsh
 
