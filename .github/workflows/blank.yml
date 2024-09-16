@@ -29,14 +29,22 @@ jobs:
     - name: Start ngrok tunnel
       run: Start-Process -NoNewWindow -FilePath .\ngrok\ngrok.exe -ArgumentList "tcp 3389" -PassThru -Wait -RedirectStandardOutput ngrok.log
 
+    - name: Wait for ngrok to start
+      run: Start-Sleep -Seconds 10
+
     - name: Fetch ngrok public address
       run: |
-        $ngrokStatus = Invoke-RestMethod -Uri http://localhost:4040/api/tunnels
-        $publicAddress = $ngrokStatus.tunnels[0].public_url
-        Write-Output "Ngrok Tunnel Public Address: $publicAddress"
+        try {
+          $ngrokStatus = Invoke-RestMethod -Uri http://localhost:4040/api/tunnels
+          $publicAddress = $ngrokStatus.tunnels[0].public_url
+          Write-Output "Ngrok Tunnel Public Address: $publicAddress"
+        } catch {
+          Write-Output "Failed to retrieve ngrok public address. Ensure ngrok is running correctly."
+          Write-Output "Error details: $_"
+        }
       shell: pwsh
 
-    - name: Display ngrok public address
+    - name: Display ngrok log
       run: |
         $ngrokLog = Get-Content -Path ngrok.log
         Write-Output "Ngrok Log:"
